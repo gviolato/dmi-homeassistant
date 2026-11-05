@@ -8,11 +8,29 @@
 A Home Assistant custom integration for weather and sea-level data from the Danish
 Meteorological Institute (DMI).
 
+## About this fork
+
+This is a fork of [aleksanderbl29/dmi-homeassistant](https://github.com/aleksanderbl29/dmi-homeassistant)
+with a few additions, kept close to upstream so changes can be offered back:
+
+- **Daily forecast**: daily entries (high/low, precipitation, peak wind, condition) aggregated
+  from the hourly HARMONIE run in Home Assistant's time zone. DMI publishes about 2.5 days of
+  model data, so the daily forecast covers today plus roughly two days.
+- **Correct current conditions**: DMI station weather codes are decoded with the WMO tables DMI
+  uses (4680 + 100 for automatic stations, 4677 for manned stations), falling back to observed
+  cloud cover when the code does not describe the sky.
+- **Night and trace rain**: clear-night is reported after sunset, and forecast hours with less
+  than 0.1 mm of precipitation are no longer shown as rainy.
+
+Install it in HACS as a custom repository (category "Integration") using this fork's URL. The
+integration domain is unchanged (`dmi`), so it replaces the upstream install in place.
+
 ## Features
 
 - **No API key required** - DMI's open data API is freely available
 - Weather entity with current conditions
 - Hourly forecast support
+- Daily forecast aggregated from the hourly model run (this fork)
 - Multiple sensor entities:
   - Temperature
   - Dew Point

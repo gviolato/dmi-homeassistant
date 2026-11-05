@@ -46,6 +46,7 @@ from .const import (
     SOURCE_TYPE_BACKUP,
     SOURCE_TYPE_PRIMARY,
 )
+from .daily import build_daily_forecast
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -407,6 +408,20 @@ class DMIDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 now,
             ),
         }
+
+    def daily_forecast(self) -> list[dict[str, Any]]:
+        """Return daily entries aggregated from the whole cached model run.
+
+        The full run (not only future hours) is used so today's high/low also
+        covers hours that have already passed.
+        """
+        if not self._weather_forecast:
+            return []
+        return build_daily_forecast(
+            self._weather_forecast.get("hourly", []),
+            dt_util.utcnow(),
+            dt_util.get_default_time_zone(),
+        )
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from DMI API.

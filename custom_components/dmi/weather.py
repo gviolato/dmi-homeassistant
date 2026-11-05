@@ -87,7 +87,9 @@ class DMIWeather(CoordinatorEntity[DMIDataUpdateCoordinator], WeatherEntity):
             and getattr(coordinator, "longitude", None) is not None
         )
         self._attr_supported_features = (
-            WeatherEntityFeature.FORECAST_HOURLY if self._supports_forecast else 0
+            WeatherEntityFeature.FORECAST_DAILY | WeatherEntityFeature.FORECAST_HOURLY
+            if self._supports_forecast
+            else 0
         )
         if not self._supports_forecast:
             _LOGGER.debug(
@@ -104,7 +106,7 @@ class DMIWeather(CoordinatorEntity[DMIDataUpdateCoordinator], WeatherEntity):
         super()._handle_coordinator_update()
         if self._supports_forecast:
             self._config_entry.async_create_task(
-                self.hass, self.async_update_listeners(("hourly",))
+                self.hass, self.async_update_listeners(("daily", "hourly"))
             )
 
     @property
@@ -202,6 +204,36 @@ class DMIWeather(CoordinatorEntity[DMIDataUpdateCoordinator], WeatherEntity):
             except (ValueError, TypeError):
                 pass
         return None
+
+    async def async_forecast_daily(self) -> list[Forecast] | None:
+        """Return the daily forecast aggregated from the hourly model run."""
+        if not self._supports_forecast:
+            return None
+
+        daily = self.coordinator.daily_forecast()
+        if not daily:
+            return None
+
+        forecasts: list[Forecast] = []
+        for entry in daily:
+            forecast = Forecast(
+                datetime=entry["datetime"],
+                native_temperature=entry["temperature"],
+                native_templow=entry["templow"],
+            )
+            if "precipitation" in entry:
+                forecast["native_precipitation"] = entry["precipitation"]
+            if "wind_speed" in entry:
+                forecast["native_wind_speed"] = entry["wind_speed"]
+            if "wind_dir" in entry:
+                forecast["wind_bearing"] = entry["wind_dir"]
+            if "humidity" in entry:
+                forecast["humidity"] = entry["humidity"]
+            if "condition" in entry:
+                forecast["condition"] = entry["condition"]
+            forecasts.append(forecast)
+
+        return forecasts
 
     async def async_forecast_hourly(self) -> list[Forecast] | None:
         """Return the hourly forecast."""

@@ -524,6 +524,53 @@ class TestDMIWeather:
         assert forecasts[0]["condition"] == "clear-night"
         assert calls and calls[0].isoformat() == "2024-01-15T22:00:00+00:00"
 
+    async def test_async_forecast_daily(
+        self,
+        mock_coordinator: MagicMock,
+        mock_config_entry: MockConfigEntry,
+    ) -> None:
+        """Daily entries from the coordinator are exposed as HA forecasts."""
+        mock_coordinator.daily_forecast.return_value = [
+            {
+                "datetime": "2024-01-15T00:00:00+01:00",
+                "temperature": 7.9,
+                "templow": 1.9,
+                "precipitation": 0.4,
+                "wind_speed": 6.2,
+                "wind_dir": 250.0,
+                "humidity": 88,
+                "condition": "partlycloudy",
+            },
+        ]
+        entity = DMIWeather(mock_coordinator, mock_config_entry)
+
+        forecasts = await entity.async_forecast_daily()
+
+        assert WeatherEntityFeature.FORECAST_DAILY in entity._attr_supported_features
+        assert forecasts == [
+            {
+                "datetime": "2024-01-15T00:00:00+01:00",
+                "native_temperature": 7.9,
+                "native_templow": 1.9,
+                "native_precipitation": 0.4,
+                "native_wind_speed": 6.2,
+                "wind_bearing": 250.0,
+                "humidity": 88,
+                "condition": "partlycloudy",
+            }
+        ]
+
+    async def test_async_forecast_daily_without_data(
+        self,
+        mock_coordinator: MagicMock,
+        mock_config_entry: MockConfigEntry,
+    ) -> None:
+        """No daily forecast is returned before the first forecast fetch."""
+        mock_coordinator.daily_forecast.return_value = []
+        entity = DMIWeather(mock_coordinator, mock_config_entry)
+
+        assert await entity.async_forecast_daily() is None
+
     async def test_async_forecast_hourly_no_data(
         self,
         mock_coordinator: MagicMock,
